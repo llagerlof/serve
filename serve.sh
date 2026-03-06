@@ -1,5 +1,36 @@
 #!/usr/bin/env bash
 
+VERSION="0.1.0"
+SCRIPT_NAME="serve"
+
+print_help() {
+  cat <<EOF
+${SCRIPT_NAME} v${VERSION}
+Tiny Bash HTTP server for files and directories.
+
+Usage:
+  ./serve.sh [TARGET]
+  PORT=9000 ./serve.sh [TARGET]
+  ./serve.sh --help
+
+Examples:
+  ./serve.sh
+  ./serve.sh html
+  ./serve.sh html/index.html
+  PORT=3000 ./serve.sh html
+EOF
+}
+
+if [[ "${1:-}" == "--help" ]]; then
+  print_help
+  exit 0
+fi
+
+if [[ "${1:-}" == -* ]]; then
+  echo "Error: unknown option '$1'. Use --help for usage." >&2
+  exit 1
+fi
+
 PORT=${PORT:-8080}
 TARGET="${1:-.}"
 
@@ -118,7 +149,17 @@ export -f handle_request mime_type url_decode send
 
 # ── setup ──────────────────────────────────────────────────────────────────
 
-command -v nc &>/dev/null || { echo "Error: 'nc' (netcat) is required." >&2; exit 1; }
+LISTENER=""
+if command -v nc &>/dev/null; then
+  LISTENER="nc"
+elif command -v socat &>/dev/null; then
+  LISTENER="socat"
+elif command -v ncat &>/dev/null; then
+  LISTENER="ncat"
+else
+  echo "Error: one of 'nc', 'socat', or 'ncat' is required." >&2
+  exit 1
+fi
 
 IS_FILE=0; [[ -f "$TARGET" ]] && IS_FILE=1
 
@@ -135,18 +176,30 @@ trap 'rm -f "$FIFO"; exit' INT TERM EXIT
 
 echo "Serving : $TARGET"
 echo "URL     : http://localhost:$PORT"
+echo "Listener: $LISTENER"
 echo "Stop    : Ctrl+C"
 
 # ── main loop ──────────────────────────────────────────────────────────────
-# Pattern: handle_request < FIFO | nc > FIFO
-#   • nc receives HTTP request from client → writes it into FIFO
+# Pattern: handle_request < FIFO | listener > FIFO
+#   • listener receives HTTP request from client → writes it into FIFO
 #   • handle_request reads request from FIFO → writes response into the pipe
-#   • nc reads response from the pipe → sends it to the client
+#   • listener reads response from the pipe → sends it to the client
+
+listen_once() {
+  case "$LISTENER" in
+    nc)
+      nc -l -p "$PORT" > "$FIFO" 2>/dev/null || nc -l "$PORT" > "$FIFO" 2>/dev/null
+      ;;
+    socat)
+      socat "TCP-LISTEN:${PORT},reuseaddr" STDIO > "$FIFO" 2>/dev/null
+      ;;
+    ncat)
+      ncat -l "$PORT" > "$FIFO" 2>/dev/null || ncat --listen "$PORT" > "$FIFO" 2>/dev/null
+      ;;
+  esac
+}
 
 while true; do
   bash -c "handle_request '$TARGET' '$IS_FILE'" < "$FIFO" \
-    | nc -l -p "$PORT"      > "$FIFO" 2>/dev/null \
-  || \
-  bash -c "handle_request '$TARGET' '$IS_FILE'" < "$FIFO" \
-    | nc -l    "$PORT"      > "$FIFO" 2>/dev/null
+    | listen_once
 done

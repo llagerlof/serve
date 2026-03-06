@@ -1,6 +1,6 @@
 # serve.sh Web Server
 
-A tiny Bash web server powered by `nc` (netcat).
+A tiny Bash web server powered by `nc`, `socat`, or `ncat`.
 
 ## What It Does
 
@@ -16,7 +16,10 @@ A tiny Bash web server powered by `nc` (netcat).
 
 - Linux or Unix-like shell environment
 - `bash`
-- `nc` (`netcat`) available on `PATH`
+- One of the following listeners available on `PATH`:
+- `nc` (`netcat`) preferred
+- `socat` fallback
+- `ncat` fallback
 
 ## Usage
 
@@ -24,6 +27,7 @@ Run from project root:
 
 ```bash
 ./serve.sh [TARGET]
+./serve.sh --help
 ```
 
 - `TARGET` optional, defaults to current directory (`.`)
@@ -41,6 +45,12 @@ Then open:
 
 ```text
 http://localhost:9000
+```
+
+Show help/version:
+
+```bash
+./serve.sh --help
 ```
 
 ## Examples
@@ -65,12 +75,14 @@ Serve one file only:
 
 ## Current Project Content
 
-- `serve.sh`: Bash + netcat HTTP server
+- `serve.sh`: Bash HTTP server (supports `nc`, `socat`, or `ncat`)
 - `html/index.html`: sample page
 
 ## Notes
 
 - The server handles one connection per loop iteration.
 - Press `Ctrl+C` to stop.
+- Listener selection order is `nc` -> `socat` -> `ncat`.
 - If `nc -l -p <port>` is unsupported, script falls back to `nc -l <port>`.
+- Script version is `0.1.0`.
 - This is intended for local development/testing, not production deployment.
