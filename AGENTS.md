@@ -42,6 +42,7 @@ Any change to `serve.sh` should preserve:
 - Proper 404 response for missing files.
 - Proper 403 response for blocked traversal attempts.
 - MIME type detection for common extensions.
+- UTF-8 charset in `Content-Type` for textual responses.
 
 ## Validation Checklist
 

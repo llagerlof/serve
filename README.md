@@ -8,6 +8,7 @@ A tiny Bash web server powered by `nc`, `socat`, or `ncat`.
 - Auto-selects an available port starting at `10000`, then `11000`, `12000`, and so on.
 - Supports explicit port selection via `--port`.
 - Resolves common MIME types (`html`, `css`, `js`, images, etc.).
+- Sends `charset=utf-8` for textual content types to avoid browser encoding issues.
 - URL-decodes request paths.
 - Prevents directory traversal outside the target root.
 - Serves `index.html` when present in directories.
@@ -90,5 +91,5 @@ Serve one file only:
 - Press `Ctrl+C` to stop.
 - Listener selection order is `nc` -> `socat` -> `ncat`.
 - If `nc -l -p <port>` is unsupported, script falls back to `nc -l <port>`.
-- Script version is `1.0.0`.
+- Script version is `1.0.1`.
 - This is intended for local development/testing, not production deployment.

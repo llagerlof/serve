@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-VERSION="1.0.0"
+VERSION="1.0.1"
 SCRIPT_NAME="serve"
 
 print_help() {
@@ -95,6 +95,19 @@ url_decode() {
 
 send() { printf '%s\r\n' "$@"; }   # write HTTP header lines
 
+content_type_header() {
+  local ct="$1"
+
+  case "$ct" in
+    text/*|application/javascript|application/json|application/xml|image/svg+xml)
+      printf '%s; charset=utf-8' "$ct"
+      ;;
+    *)
+      printf '%s' "$ct"
+      ;;
+  esac
+}
+
 is_port_in_use() {
   local candidate="$1"
 
@@ -168,7 +181,7 @@ handle_request() {
     # Prevent path traversal
     full=$(realpath -sm "$root/$req_path" 2>/dev/null || echo "$root/$req_path")
     if [[ "$full" != "$root"* ]]; then
-      send "HTTP/1.1 403 Forbidden" "Content-Type: text/plain" "Connection: close" ""
+      send "HTTP/1.1 403 Forbidden" "Content-Type: text/plain; charset=utf-8" "Connection: close" ""
       printf 'Forbidden'
       return
     fi
@@ -178,7 +191,7 @@ handle_request() {
   if [[ ! -e "$full" ]]; then
     local body="<html><body><h1>404 Not Found</h1><p>${req_path}</p></body></html>"
     send "HTTP/1.1 404 Not Found" \
-         "Content-Type: text/html" \
+         "Content-Type: text/html; charset=utf-8" \
          "Content-Length: ${#body}" \
          "Connection: close" ""
     printf '%s' "$body"
@@ -203,7 +216,7 @@ handle_request() {
       done < <(find "$full" -maxdepth 1 ! -path "$full" | sort)
       body+="<hr></body></html>"
       send "HTTP/1.1 200 OK" \
-           "Content-Type: text/html" \
+           "Content-Type: text/html; charset=utf-8" \
            "Content-Length: ${#body}" \
            "Connection: close" ""
       printf '%s' "$body"
@@ -212,17 +225,18 @@ handle_request() {
   fi
 
   # ── regular file ──
-  local ct size
+  local ct ct_header size
   ct=$(mime_type "$full")
+  ct_header=$(content_type_header "$ct")
   size=$(wc -c < "$full")
   send "HTTP/1.1 200 OK" \
-       "Content-Type: ${ct}" \
+       "Content-Type: ${ct_header}" \
        "Content-Length: ${size}" \
        "Connection: close" ""
   cat "$full"
 }
 
-export -f handle_request mime_type url_decode send
+export -f handle_request mime_type url_decode send content_type_header
 
 # ── setup ──────────────────────────────────────────────────────────────────
 
