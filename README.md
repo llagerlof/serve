@@ -5,7 +5,8 @@ A tiny Bash web server powered by `nc`, `socat`, or `ncat`.
 ## What It Does
 
 - Serves a single file or a whole directory.
-- Uses `PORT` environment variable (default: `8080`).
+- Auto-selects an available port starting at `10000`, then `11000`, `12000`, and so on.
+- Supports explicit port selection via `--port`.
 - Resolves common MIME types (`html`, `css`, `js`, images, etc.).
 - URL-decodes request paths.
 - Prevents directory traversal outside the target root.
@@ -27,6 +28,7 @@ Run from project root:
 
 ```bash
 ./serve.sh [TARGET]
+./serve.sh --port 9000 [TARGET]
 ./serve.sh --help
 ```
 
@@ -38,7 +40,7 @@ Run from project root:
 Set a custom port:
 
 ```bash
-PORT=9000 ./serve.sh html
+./serve.sh --port 9000 html
 ```
 
 Then open:
@@ -46,6 +48,10 @@ Then open:
 ```text
 http://localhost:9000
 ```
+
+If no port is provided, the script picks the first free port in the sequence `10000`, `11000`, `12000`, ...
+
+If you explicitly set a port with `--port` and it is already in use, the script exits with an error.
 
 Show help/version:
 
@@ -84,5 +90,5 @@ Serve one file only:
 - Press `Ctrl+C` to stop.
 - Listener selection order is `nc` -> `socat` -> `ncat`.
 - If `nc -l -p <port>` is unsupported, script falls back to `nc -l <port>`.
-- Script version is `0.1.0`.
+- Script version is `1.0.0`.
 - This is intended for local development/testing, not production deployment.

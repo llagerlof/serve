@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-VERSION="0.1.0"
+VERSION="1.0.0"
 SCRIPT_NAME="serve"
 
 print_help() {
@@ -10,29 +10,57 @@ Tiny Bash HTTP server for files and directories.
 
 Usage:
   ./serve.sh [TARGET]
-  PORT=9000 ./serve.sh [TARGET]
+  ./serve.sh --port 9000 [TARGET]
   ./serve.sh --help
 
 Examples:
   ./serve.sh
   ./serve.sh html
   ./serve.sh html/index.html
-  PORT=3000 ./serve.sh html
+  ./serve.sh --port 3000 html
 EOF
 }
 
-if [[ "${1:-}" == "--help" ]]; then
-  print_help
-  exit 0
-fi
+PORT=""
+TARGET="."
 
-if [[ "${1:-}" == -* ]]; then
-  echo "Error: unknown option '$1'. Use --help for usage." >&2
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --help)
+      print_help
+      exit 0
+      ;;
+    --port)
+      if [[ -z "${2:-}" ]]; then
+        echo "Error: --port requires a value." >&2
+        exit 1
+      fi
+      PORT="$2"
+      shift 2
+      ;;
+    --port=*)
+      PORT="${1#*=}"
+      shift
+      ;;
+    --*)
+      echo "Error: unknown option '$1'. Use --help for usage." >&2
+      exit 1
+      ;;
+    *)
+      if [[ "$TARGET" != "." ]]; then
+        echo "Error: too many positional arguments. Use --help for usage." >&2
+        exit 1
+      fi
+      TARGET="$1"
+      shift
+      ;;
+  esac
+done
+
+if [[ -n "$PORT" ]] && [[ ! "$PORT" =~ ^[0-9]+$ || "$PORT" -lt 1 || "$PORT" -gt 65535 ]]; then
+  echo "Error: invalid port '$PORT'. Expected a number between 1 and 65535." >&2
   exit 1
 fi
-
-PORT=${PORT:-8080}
-TARGET="${1:-.}"
 
 if [ ! -e "$TARGET" ]; then
   echo "Error: '$TARGET' does not exist." >&2; exit 1
@@ -66,6 +94,55 @@ url_decode() {
 }
 
 send() { printf '%s\r\n' "$@"; }   # write HTTP header lines
+
+is_port_in_use() {
+  local candidate="$1"
+
+  if command -v ss >/dev/null 2>&1; then
+    ss -ltnH "sport = :${candidate}" 2>/dev/null | grep -q .
+    return
+  fi
+
+  if command -v lsof >/dev/null 2>&1; then
+    lsof -nP -iTCP:"${candidate}" -sTCP:LISTEN >/dev/null 2>&1
+    return
+  fi
+
+  if command -v netstat >/dev/null 2>&1; then
+    netstat -ltn 2>/dev/null | awk '{print $4}' | grep -Eq "[:.]${candidate}$"
+    return
+  fi
+
+  # Last-resort probe against localhost if no socket tooling exists.
+  if command -v timeout >/dev/null 2>&1; then
+    timeout 1 bash -c "exec 3<>/dev/tcp/127.0.0.1/${candidate}" >/dev/null 2>&1
+    return
+  fi
+
+  bash -c "exec 3<>/dev/tcp/127.0.0.1/${candidate}" >/dev/null 2>&1
+}
+
+select_port() {
+  if [[ -n "$PORT" ]]; then
+    if is_port_in_use "$PORT"; then
+      echo "Error: port ${PORT} is already in use." >&2
+      exit 1
+    fi
+    return
+  fi
+
+  local candidate=10000
+  while [[ "$candidate" -le 65000 ]]; do
+    if ! is_port_in_use "$candidate"; then
+      PORT="$candidate"
+      return
+    fi
+    candidate=$((candidate + 1000))
+  done
+
+  echo "Error: no available port found from 10000 to 65000 (step 1000)." >&2
+  exit 1
+}
 
 # ── request handler (one request per invocation) ──────────────────────────
 
@@ -162,6 +239,7 @@ else
 fi
 
 IS_FILE=0; [[ -f "$TARGET" ]] && IS_FILE=1
+select_port
 
 # Absolute path
 if [[ "$IS_FILE" == "1" ]]; then

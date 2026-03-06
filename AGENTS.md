@@ -32,7 +32,8 @@ This repo contains a minimal Bash HTTP server (`serve.sh`) using netcat, plus a 
 
 Any change to `serve.sh` should preserve:
 
-- `PORT` env var support with default `8080`.
+- Auto port selection when no explicit port is provided: start at `10000`, then increment by `1000`.
+- Explicit port support via `--port`; if occupied, exit with a non-zero error.
 - `TARGET` argument behavior:
 - Directory target: resolve requested path beneath root.
 - File target: always serve that file.
@@ -47,10 +48,11 @@ Any change to `serve.sh` should preserve:
 After edits, agents should verify:
 
 1. `./serve.sh html` starts without errors.
-2. `curl -i http://localhost:8080/` returns `200`.
-3. `curl -i http://localhost:8080/does-not-exist` returns `404`.
-4. `curl -i "http://localhost:8080/../etc/passwd"` returns `403`.
+2. Use the printed URL port from startup output, then verify `curl -i http://localhost:<port>/` returns `200`.
+3. Use the same printed port and verify `curl -i http://localhost:<port>/does-not-exist` returns `404`.
+4. Use the same printed port and verify `curl -i "http://localhost:<port>/../etc/passwd"` returns `403`.
 5. Directory listing appears for folders without `index.html`.
+6. `./serve.sh --port <busy-port>` exits non-zero with a port-in-use error.
 
 ## Documentation Policy
 
