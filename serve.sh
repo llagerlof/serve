@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-VERSION="1.0.1"
+VERSION="1.0.2"
 SCRIPT_NAME="serve"
 
 print_help() {
@@ -252,22 +252,34 @@ else
   exit 1
 fi
 
-IS_FILE=0; [[ -f "$TARGET" ]] && IS_FILE=1
-select_port
+IS_FILE=0
+URL_SUFFIX=""
 
-# Absolute path
-if [[ "$IS_FILE" == "1" ]]; then
-  TARGET=$(cd "$(dirname "$TARGET")" && pwd)/$(basename "$TARGET")
+if [[ -f "$TARGET" ]]; then
+  case "$TARGET" in
+    *.html|*.htm)
+      # For HTML entry files, serve the containing directory so relative assets work.
+      URL_SUFFIX="/$(basename "$TARGET")"
+      TARGET=$(cd "$(dirname "$TARGET")" && pwd)
+      IS_FILE=0
+      ;;
+    *)
+      IS_FILE=1
+      TARGET=$(cd "$(dirname "$TARGET")" && pwd)/$(basename "$TARGET")
+      ;;
+  esac
 else
   TARGET=$(cd "$TARGET" && pwd)
 fi
+
+select_port
 
 FIFO=$(mktemp -u /tmp/srv_XXXXXX)
 mkfifo "$FIFO"
 trap 'rm -f "$FIFO"; exit' INT TERM EXIT
 
 echo "Serving : $TARGET"
-echo "URL     : http://localhost:$PORT"
+echo "URL     : http://localhost:$PORT${URL_SUFFIX}"
 echo "Listener: $LISTENER"
 echo "Stop    : Ctrl+C"
 

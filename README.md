@@ -36,7 +36,8 @@ Run from project root:
 - `TARGET` optional, defaults to current directory (`.`)
 - `TARGET` can be:
 - a directory (serve files under it)
-- a single file (always serves that file)
+- a single non-HTML file (always serves that file)
+- an HTML file (serves that file's directory, and prints a URL ending in that HTML path)
 
 Set a custom port:
 
@@ -80,6 +81,14 @@ Serve one file only:
 ./serve.sh html/index.html
 ```
 
+When the file target is `.html` or `.htm`, the server uses the file's parent directory as the web root and prints a URL like:
+
+```text
+http://localhost:10000/index.html
+```
+
+This allows relative assets (for example image files referenced from that page) to load correctly.
+
 ## Current Project Content
 
 - `serve.sh`: Bash HTTP server (supports `nc`, `socat`, or `ncat`)
@@ -91,5 +100,5 @@ Serve one file only:
 - Press `Ctrl+C` to stop.
 - Listener selection order is `nc` -> `socat` -> `ncat`.
 - If `nc -l -p <port>` is unsupported, script falls back to `nc -l <port>`.
-- Script version is `1.0.1`.
+- Script version is `1.0.2`.
 - This is intended for local development/testing, not production deployment.

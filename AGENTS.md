@@ -36,7 +36,8 @@ Any change to `serve.sh` should preserve:
 - Explicit port support via `--port`; if occupied, exit with a non-zero error.
 - `TARGET` argument behavior:
 - Directory target: resolve requested path beneath root.
-- File target: always serve that file.
+- Non-HTML file target: always serve that file.
+- HTML file target (`.html`/`.htm`): serve its parent directory and print URL with that HTML path suffix.
 - `index.html` precedence in directories.
 - Auto-generated directory listing when no index exists.
 - Proper 404 response for missing files.
