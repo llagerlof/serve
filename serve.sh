@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-VERSION="1.0.2"
+VERSION="1.0.4"
 SCRIPT_NAME="serve"
+SELF_PATH=$(realpath "$0" 2>/dev/null || printf '%s' "$0")
 
 print_help() {
   cat <<EOF
@@ -238,18 +239,34 @@ handle_request() {
 
 export -f handle_request mime_type url_decode send content_type_header
 
+if [[ "${SERVE_CHILD_MODE:-}" == "1" ]]; then
+  handle_request "${SERVE_TARGET:-.}" "${SERVE_IS_FILE:-0}"
+  exit
+fi
+
 # ── setup ──────────────────────────────────────────────────────────────────
 
 LISTENER=""
-if command -v nc &>/dev/null; then
-  LISTENER="nc"
-elif command -v socat &>/dev/null; then
+NC_EOF_MODE=""
+if command -v socat &>/dev/null; then
   LISTENER="socat"
 elif command -v ncat &>/dev/null; then
   LISTENER="ncat"
+elif command -v nc &>/dev/null; then
+  LISTENER="nc"
 else
   echo "Error: one of 'nc', 'socat', or 'ncat' is required." >&2
   exit 1
+fi
+
+if [[ "$LISTENER" == "nc" ]]; then
+  nc_help=$(nc -h 2>&1 || true)
+
+  if grep -q -- ' -N ' <<< "$nc_help"; then
+    NC_EOF_MODE="N"
+  elif grep -q -- ' -q ' <<< "$nc_help"; then
+    NC_EOF_MODE="q0"
+  fi
 fi
 
 IS_FILE=0
@@ -272,11 +289,12 @@ else
   TARGET=$(cd "$TARGET" && pwd)
 fi
 
+printf -v HANDLER_CMD 'SERVE_CHILD_MODE=1 SERVE_TARGET=%q SERVE_IS_FILE=%q %q' "$TARGET" "$IS_FILE" "$SELF_PATH"
+
 select_port
 
-FIFO=$(mktemp -u /tmp/srv_XXXXXX)
-mkfifo "$FIFO"
-trap 'rm -f "$FIFO"; exit' INT TERM EXIT
+FIFO=""
+trap '[[ -n "$FIFO" ]] && rm -f "$FIFO"; exit' INT TERM EXIT
 
 echo "Serving : $TARGET"
 echo "URL     : http://localhost:$PORT${URL_SUFFIX}"
@@ -284,26 +302,51 @@ echo "Listener: $LISTENER"
 echo "Stop    : Ctrl+C"
 
 # ── main loop ──────────────────────────────────────────────────────────────
-# Pattern: handle_request < FIFO | listener > FIFO
-#   • listener receives HTTP request from client → writes it into FIFO
-#   • handle_request reads request from FIFO → writes response into the pipe
-#   • listener reads response from the pipe → sends it to the client
+# Prefer listeners that can keep the port open across overlapping browser
+# requests. Fall back to the original FIFO bridge for plain nc.
+
+serve_with_socat() {
+  socat "TCP-LISTEN:${PORT},reuseaddr,fork" \
+    SYSTEM:"$HANDLER_CMD" 2>/dev/null
+}
+
+serve_with_ncat() {
+  ncat --listen --keep-open "$PORT" \
+    --sh-exec "$HANDLER_CMD" 2>/dev/null
+}
 
 listen_once() {
   case "$LISTENER" in
     nc)
-      nc -l -p "$PORT" > "$FIFO" 2>/dev/null || nc -l "$PORT" > "$FIFO" 2>/dev/null
-      ;;
-    socat)
-      socat "TCP-LISTEN:${PORT},reuseaddr" STDIO > "$FIFO" 2>/dev/null
-      ;;
-    ncat)
-      ncat -l "$PORT" > "$FIFO" 2>/dev/null || ncat --listen "$PORT" > "$FIFO" 2>/dev/null
+      case "$NC_EOF_MODE" in
+        N)
+          nc -N -l -p "$PORT" > "$FIFO" 2>/dev/null || nc -N -l "$PORT" > "$FIFO" 2>/dev/null
+          ;;
+        q0)
+          nc -q 0 -l -p "$PORT" > "$FIFO" 2>/dev/null || nc -q 0 -l "$PORT" > "$FIFO" 2>/dev/null
+          ;;
+        *)
+          nc -l -p "$PORT" > "$FIFO" 2>/dev/null || nc -l "$PORT" > "$FIFO" 2>/dev/null
+          ;;
+      esac
       ;;
   esac
 }
 
-while true; do
-  bash -c "handle_request '$TARGET' '$IS_FILE'" < "$FIFO" \
-    | listen_once
-done
+case "$LISTENER" in
+  socat)
+    serve_with_socat
+    ;;
+  ncat)
+    serve_with_ncat
+    ;;
+  nc)
+    FIFO=$(mktemp -u /tmp/srv_XXXXXX)
+    mkfifo "$FIFO"
+
+    while true; do
+      bash -c "handle_request '$TARGET' '$IS_FILE'" < "$FIFO" \
+        | listen_once
+    done
+    ;;
+esac

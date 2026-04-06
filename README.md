@@ -18,14 +18,17 @@ A tiny shell script (linux bash) that is a web server.
 - Resolves common MIME types (`html`, `css`, `js`, images, etc.).
 - Sends `charset=utf-8` for textual content types to avoid browser encoding issues.
 - Prevents directory traversal outside the target root.
+- Prefers `socat` or `ncat` when available so overlapping browser asset requests do not reset the connection.
 
 ## Requirements
 
-It's almost sure that one of these programs exists pre-installed in your distro.
+The server uses the first available listener in this order: `socat`, `ncat`, then `nc`.
 
+One of these programs must be installed:
+
+- `socat`
+- `ncat`
 - `nc` (netcat)
-  - or `socat` (fallback)
-  - or `ncat` (fallback)
 
 ## Usage
 
@@ -60,6 +63,8 @@ $ serve.sh --port 8080 /var/www/html/
 If no port is provided, the script picks the first free port in the sequence `10000`, `11000`, `12000`, ...
 
 If you explicitly set a port with `--port` and it is already in use, the script exits with an error.
+
+If multiple listener tools are installed, the startup `Listener:` line shows which one was selected.
 
 **Show help/version:**
 

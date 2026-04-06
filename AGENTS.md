@@ -17,6 +17,7 @@ This repo contains a minimal Bash HTTP server (`serve.sh`) using netcat, plus a 
 
 - Keep the project simple and dependency-light.
 - Preserve compatibility with common `nc` variants.
+- Prefer multi-connection-capable listeners (`socat`, `ncat`) when available so browsers can fetch assets without connection resets.
 - Favor readability over clever shell constructs.
 - Avoid introducing framework-level complexity.
 
@@ -55,6 +56,7 @@ After edits, agents should verify:
 4. Use the same printed port and verify `curl -i "http://localhost:<port>/../etc/passwd"` returns `403`.
 5. Directory listing appears for folders without `index.html`.
 6. `./serve.sh --port <busy-port>` exits non-zero with a port-in-use error.
+7. Concurrent requests for `/`, a referenced asset, and `/favicon.ico` do not fail with connection reset when `socat` or `ncat` is installed.
 
 ## Documentation Policy
 
