@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-VERSION="1.0.4"
+VERSION="1.0.5"
 SCRIPT_NAME="serve"
 SELF_PATH=$(realpath "$0" 2>/dev/null || printf '%s' "$0")
 
@@ -10,15 +10,15 @@ ${SCRIPT_NAME} v${VERSION}
 Tiny Bash HTTP server for files and directories.
 
 Usage:
-  ./serve.sh [TARGET]
-  ./serve.sh --port 9000 [TARGET]
-  ./serve.sh --help
+  serve [TARGET]
+  serve --port 9000 [TARGET]
+  serve --help
 
 Examples:
-  ./serve.sh
-  ./serve.sh html
-  ./serve.sh html/index.html
-  ./serve.sh --port 3000 html
+  serve
+  serve html
+  serve html/index.html
+  serve --port 3000 html
 EOF
 }
 

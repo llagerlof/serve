@@ -4,11 +4,11 @@ Guidance for coding agents working in this repository.
 
 ## Repository Purpose
 
-This repo contains a minimal Bash HTTP server (`serve.sh`) using netcat, plus a small static HTML example under `html/`.
+This repo contains a minimal Bash HTTP server (`serve`) using netcat, plus a small static HTML example under `html/`.
 
 ## Key Files
 
-- `serve.sh`: main server implementation
+- `serve`: main server implementation
 - `html/index.html`: demo static page
 - `README.md`: end-user documentation
 - `.github/instructions/docs-sync.instructions.md`: doc-sync rule for Copilot instructions
@@ -31,7 +31,7 @@ This repo contains a minimal Bash HTTP server (`serve.sh`) using netcat, plus a 
 
 ## Functional Expectations
 
-Any change to `serve.sh` should preserve:
+Any change to `serve` should preserve:
 
 - Auto port selection when no explicit port is provided: start at `10000`, then increment by `1000`.
 - Explicit port support via `--port`; if occupied, exit with a non-zero error.
@@ -50,12 +50,12 @@ Any change to `serve.sh` should preserve:
 
 After edits, agents should verify:
 
-1. `./serve.sh html` starts without errors.
+1. `./serve html` starts without errors.
 2. Use the printed URL port from startup output, then verify `curl -i http://localhost:<port>/` returns `200`.
 3. Use the same printed port and verify `curl -i http://localhost:<port>/does-not-exist` returns `404`.
 4. Use the same printed port and verify `curl -i "http://localhost:<port>/../etc/passwd"` returns `403`.
 5. Directory listing appears for folders without `index.html`.
-6. `./serve.sh --port <busy-port>` exits non-zero with a port-in-use error.
+6. `./serve --port <busy-port>` exits non-zero with a port-in-use error.
 7. Concurrent requests for `/`, a referenced asset, and `/favicon.ico` do not fail with connection reset when `socat` or `ncat` is installed.
 
 ## Documentation Policy

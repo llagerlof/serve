@@ -1,12 +1,24 @@
-# serve.sh web server
+# serve web server
 
-A tiny shell script (linux bash) that is a web server.
+A tiny Bash HTTP server for local file and directory sharing.
 
 ## Quick start
 
-- `cd` into directory to be served and run the `serve.sh` script. Done.
+- Run `serve` from the directory you want to expose, or pass a path explicitly.
+- Open the URL printed at startup in your browser.
 
-- Access `http://localhost:10000` in a browser.
+## Installation
+
+Clone the repository into `~/repos`, then link the script into `~/.local/bin` so it is available on your `PATH`.
+
+```bash
+mkdir -p ~/repos
+git clone https://github.com/llagerlof/serve.git ~/repos/serve
+mkdir -p ~/.local/bin
+ln -sf ~/repos/serve/serve ~/.local/bin/serve
+```
+
+If `~/.local/bin` is not already on your `PATH`, add it in your shell profile before opening a new shell.
 
 ## Features
 
@@ -32,58 +44,58 @@ One of these programs must be installed:
 
 ## Usage
 
-Run from project root:
+Run from anywhere after installing, or from the repository that should be served.
 
-```
-./serve.sh [TARGET]
-./serve.sh --port 9000 [TARGET]
-./serve.sh --help
+```text
+$ serve [TARGET]
+$ serve --port 9000 [TARGET]
+$ serve --help
 ```
 
-- `TARGET` optional, defaults to current directory (`.`)
-  - `TARGET` can be:
-  - a directory (serve files under it)
-  - a single non-HTML file (always serves that file)
-  - an HTML file (serves that file's directory, and prints a URL ending in that HTML path)
+`TARGET` is optional and defaults to the current directory (`.`).
+
+`TARGET` can be one of these:
+
+- A directory: serves files rooted at that directory.
+- A single non-HTML file: always serves that file, regardless of request path.
+- An HTML file: serves the file's parent directory and prints a startup URL that includes that HTML path.
+
+When you omit `--port`, `serve` picks the first free port in the sequence `10000`, `11000`, `12000`, and so on.
+
+When you pass `--port`, that port must already be free or the script exits with an error.
+
+At startup, the `Listener:` line shows which backend was chosen: `socat`, `ncat`, or `nc`.
 
 ## Examples
 
-**Set a custom port and serves directory `html` that exists in current directory:**
+Serve the current directory:
 
-```
-$ serve.sh --port 9000 html
-```
-Then open on browser `http://localhost:9000`
-
-**You also can pass the full path:**
-```
-$ serve.sh --port 8080 /var/www/html/
+```bash
+serve
 ```
 
-If no port is provided, the script picks the first free port in the sequence `10000`, `11000`, `12000`, ...
+Serve the `html` directory on a fixed port:
 
-If you explicitly set a port with `--port` and it is already in use, the script exits with an error.
-
-If multiple listener tools are installed, the startup `Listener:` line shows which one was selected.
-
-**Show help/version:**
-
-```
-$ serve.sh --help
+```bash
+serve --port 9000 html
 ```
 
-## Examples
+Serve an absolute path:
 
-**Serve current directory:**
-
-```
-$ serve.sh
+```bash
+serve --port 8080 /var/www/html/
 ```
 
-**Serve one file only (file's directory is still accessible):**
+Serve a single HTML file and open the printed URL:
 
+```bash
+serve html/index.html
 ```
-$ serve.sh html/calculator.html
+
+Show help and version:
+
+```bash
+serve --help
 ```
 
 ## Notes
