@@ -1,21 +1,22 @@
-# serve web server
+# `serve`: The tiny shell script web server
 
-A tiny Bash HTTP server for local file and directory sharing.
+A very small bash HTTP server for local file and directory sharing between devices in the same network.
 
 ## Quick start
 
 - Run `serve` from the directory you want to expose, or pass a path explicitly.
-- Open the URL printed at startup in your browser.
+- Open the printed `Local URL` in your browser, or use the printed `Network URL` from another device on the same network.
+- Press `Ctrl+C` to stop.
 
 ## Installation
 
 Clone the repository into `~/repos`, then link the script into `~/.local/bin` so it is available on your `PATH`.
 
 ```bash
-mkdir -p ~/repos
-git clone https://github.com/llagerlof/serve.git ~/repos/serve
-mkdir -p ~/.local/bin
-ln -sf ~/repos/serve/serve ~/.local/bin/serve
+$ mkdir -p ~/repos
+$ git clone https://github.com/llagerlof/serve.git ~/repos/serve
+$ mkdir -p ~/.local/bin
+$ ln -sf ~/repos/serve/serve ~/.local/bin/serve
 ```
 
 If `~/.local/bin` is not already on your `PATH`, add it in your shell profile before opening a new shell.
@@ -31,6 +32,7 @@ If `~/.local/bin` is not already on your `PATH`, add it in your shell profile be
 - Sends `charset=utf-8` for textual content types to avoid browser encoding issues.
 - Prevents directory traversal outside the target root.
 - Prefers `socat` or `ncat` when available so overlapping browser asset requests do not reset the connection.
+- Prints both a localhost URL and a detected network URL at startup for same-LAN sharing.
 
 ## Requirements
 
@@ -64,41 +66,40 @@ When you omit `--port`, `serve` picks the first free port in the sequence `10000
 
 When you pass `--port`, that port must already be free or the script exits with an error.
 
-At startup, the `Listener:` line shows which backend was chosen: `socat`, `ncat`, or `nc`.
+At startup, `serve` prints `Local URL`, `Network URL`, and `Listener` lines. The network URL uses the machine's detected non-loopback IP and may be unavailable if no suitable address can be determined.
 
 ## Examples
 
 Serve the current directory:
 
 ```bash
-serve
+$ serve
 ```
 
 Serve the `html` directory on a fixed port:
 
 ```bash
-serve --port 9000 html
+$ serve --port 9000 html
 ```
 
 Serve an absolute path:
 
 ```bash
-serve --port 8080 /var/www/html/
+$ serve --port 8080 /var/www/html/
 ```
 
 Serve a single HTML file and open the printed URL:
 
 ```bash
-serve html/index.html
+$ serve html/index.html
 ```
 
 Show help and version:
 
 ```bash
-serve --help
+$ serve --help
 ```
 
 ## Notes
 
-- Press `Ctrl+C` to stop.
-- This is intended for local development/testing, not production deployment.
+
